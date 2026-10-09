@@ -38,6 +38,29 @@ app.get('/api/status', (req, res) => {
 
 // ─── Génération de questions à la volée pour matchs ──────────────
 
+function getDisciplineRules(subjectName) {
+  const norm = String(subjectName || '').toLowerCase()
+  if (norm.includes('math')) {
+    return `RÈGLE STRICTE SUR LA MATIÈRE :
+- Tu es un examinateur de MATHÉMATIQUES PURES.
+- Les questions doivent porter EXCLUSIVEMENT sur les concepts mathématiques : analyse, fonctions, limites, dérivées, primitives, intégrales, logarithmes, exponentielles, suites, probabilités, nombres complexes, géométrie.
+- INTERDICTION ABSOLUE : ZÉRO question de physique (aucun condensateur, aucun circuit électrique RC/RLC, aucune notion d'électricité, de force, d'énergie ou de chimie). Même pour les équations différentielles, formule des équations purement mathématiques sans contexte physique (ex: y' + 2y = 0 avec y(0) = 1).`
+  }
+  if (norm.includes('physique') || norm.includes('chimie')) {
+    return `RÈGLE STRICTE SUR LA MATIÈRE :
+- Tu es un examinateur de PHYSIQUE-CHIMIE (mécanique, électricité, optique, ondes, chimie).`
+  }
+  if (norm.includes('svt')) {
+    return `RÈGLE STRICTE SUR LA MATIÈRE :
+- Tu es un examinateur de SVT (biologie, géologie, génétique).`
+  }
+  if (norm.includes('philo')) {
+    return `RÈGLE STRICTE SUR LA MATIÈRE :
+- Tu es un examinateur de PHILOSOPHIE.`
+  }
+  return `RÈGLE STRICTE : Reste rigoureusement dans le champ disciplinaire de la matière "${subjectName}".`
+}
+
 app.post('/api/generate-questions', async (req, res) => {
   const { subjectName, levelName, count = 6, contextText = '', topic = '' } = req.body
 
@@ -45,13 +68,15 @@ app.post('/api/generate-questions', async (req, res) => {
     return res.status(400).json({ error: 'subjectName et levelName sont requis.' })
   }
 
-  const systemPrompt = `Tu es l'examinateur d'élite de NerdsBattle pour le programme scolaire de Côte d'Ivoire.
-Ta mission est de créer des questions QCM percutantes, stimulantes et sans ambiguïté.
+  const disciplineRule = getDisciplineRules(subjectName)
+
+  const systemPrompt = `Tu es l'examinateur d'élite de NerdsBattle pour le programme officiel de Côte d'Ivoire.
+Ta mission est de créer des questions QCM professionnelles, captivantes et impeccablement formatées.
 Tu dois répondre STRICTEMENT en JSON avec la structure :
 {
   "questions": [
     {
-      "prompt": "Énoncé précis et auto-suffisant (pas de référence à un livre/page)",
+      "prompt": "Énoncé clair, auto-suffisant avec formules entre dollars simples si nécessaire",
       "options": ["Choix A", "Choix B", "Choix C", "Choix D"],
       "answer": 0,
       "explanation": "Explication pédagogique concise"
@@ -61,17 +86,20 @@ Tu dois répondre STRICTEMENT en JSON avec la structure :
 
   const userPrompt = `Matière : ${subjectName}
 Niveau : ${levelName}
-Thème spécifique : ${topic || 'Général'}
-Nombre de questions souhaité : ${count}
+Thème : ${topic || 'Général'}
+Nombre de questions : ${count}
 
-Contexte et types d'exercices au programme :
+${disciplineRule}
+
+Contexte du programme :
 ${contextText || 'Programme officiel national'}
 
-Consignes strictes :
-1. Chaque question doit être autonome.
-2. Exactement 4 choix de réponses distincts.
-3. Le champ "answer" DOIT être l'index 0-based exact (0, 1, 2 ou 3) de la bonne réponse.
-4. L'explication doit justifier clairement la bonne réponse.`
+CONSIGNES STRICTES :
+1. ${disciplineRule}
+2. Chaque question doit être 100% autonome et compréhensible seule.
+3. Exactement 4 choix de réponses distincts et réalistes.
+4. "answer" DOIT être l'index 0-based exact (0, 1, 2 ou 3) de la bonne réponse.
+5. FORMULES MATHÉMATIQUES : Entoure TOUTES les formules, variables et fractions de dollars simples $ ... $ (ex: "$t = \\frac{\\ln 4}{2}$", "$3e^{2t} = 12$", "$f(x) = x^2$"). Ne laisse JAMAIS de commande LaTeX nue sans "$".`
 
   try {
     const rawResult = await executeCompletion({

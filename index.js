@@ -6,13 +6,26 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import fs from 'fs'
+import path from 'path'
 import { executeCompletion, getPoolStats } from './groq-pool.js'
 import { sanitizeQuestionList } from './question-verifier.js'
+import { BackgroundEnricher } from './background-enricher.js'
 
+// Charger .env depuis server/ ou depuis la racine du projet
 dotenv.config()
+const rootEnv = path.resolve(process.cwd(), '.env')
+if (fs.existsSync(rootEnv)) {
+  dotenv.config({ path: rootEnv })
+}
+const parentEnv = path.resolve(process.cwd(), '..', '.env')
+if (fs.existsSync(parentEnv)) {
+  dotenv.config({ path: parentEnv })
+}
 
 const app = express()
 const PORT = process.env.PORT || 3001
+const enricher = new BackgroundEnricher()
 
 app.use(cors())
 app.use(express.json())
@@ -32,8 +45,18 @@ app.get('/api/status', (req, res) => {
   res.status(200).json({
     status: 'ok',
     uptime: Math.floor(process.uptime()),
-    pool: getPoolStats()
+    pool: getPoolStats(),
+    enricher: enricher.getStats()
   })
+})
+
+app.post('/api/enrich-now', async (req, res) => {
+  try {
+    enricher.runCycle()
+    return res.status(200).json({ success: true, message: 'Cycle d’enrichissement déclenché.' })
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
 })
 
 // ─── Génération de questions à la volée pour matchs ──────────────
@@ -188,4 +211,5 @@ Consignes :
 app.listen(PORT, () => {
   console.log(`[nerdsbattle-ai-service] En écoute sur le port ${PORT}`)
   console.log(`[nerdsbattle-ai-service] Healthcheck disponible sur http://localhost:${PORT}/health`)
+  enricher.start()
 })

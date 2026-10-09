@@ -9,10 +9,10 @@ Ce microservice Node.js gère la génération, l'enrichissement et la vérificat
 ### Étape 1 : Créer le Web Service sur Render
 
 1. Rends-toi sur [Render Dashboard](https://dashboard.render.com/) et clique sur **New +** $\rightarrow$ **Web Service**.
-2. Connecte ton dépôt GitHub `NerdsBattle`.
+2. Connecte ce dépôt GitHub : `elm-as/nerdsbattle-ai-service`.
 3. Configure les paramètres suivants :
-   - **Name** : `nerdsbattle-ai-service` (ou le nom de ton choix)
-   - **Root Directory** : `server`
+   - **Name** : `nerdsbattle-ai-service`
+   - **Root Directory** : *(laisser vide)*
    - **Environment** : `Node`
    - **Build Command** : `npm install`
    - **Start Command** : `npm start`
